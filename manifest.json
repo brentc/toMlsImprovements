@@ -1,0 +1,17 @@
+{
+    "name":"TO MLS Improvements",
+    "version":"1.0",
+    "manifest_version": 2,
+    "description":"Improvements the TO MLS Stratus Report Pages",
+    "content_scripts":[
+        {
+            "exclude_globs":[  ],
+            "exclude_matches":[  ],
+            "include_globs":[ ],
+            "js":[ "tomlsimprovements.user.js" ],
+            "matches":[ "http://torontomls.net/*", "http://*.torontomls.net/*" ],
+            "run_at":"document_idle"
+        }
+    ]
+
+}
