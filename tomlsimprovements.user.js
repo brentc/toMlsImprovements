@@ -43,6 +43,7 @@ function main() {
             fx = $({}),
             google,
             geocoder,
+            listingScrollPadding = 20,
             templates = {
                 'style': function() {
                     return '' +
@@ -628,6 +629,8 @@ function main() {
 
                 zoom = (1+(0.25* current));
 
+                console.debug('New Zoom: ' + zoom);
+
                 list.data('zoom', current);
                 images.each(function() {
                     var image = $(this),
@@ -639,25 +642,23 @@ function main() {
                     if(image.is(':hidden')) {
                         // image needs to be visible to calculate width properly
                         hidden = true;
-                        image.css({ position: 'absolute', left: image.parent().width() * 10 }).show();;
+                        image.css({ position: 'absolute', left: image.parent().width() * 10 }).show();
                     }
 
                     imgCurrentWidth = img.width();
                     imgBaseWidth = img.css({ width: '' }).width();
                     img.css({ width: imgCurrentWidth + 'px'});
 
-                    if(current != 0) {
-                        fx.queue(function(next) {
-                            if(hidden) {
-                                img.css({ width: imgBaseWidth * zoom });
+                    fx.queue(function(next) {
+                        if(hidden) {
+                            img.css({ width: imgBaseWidth * zoom });
+                            next();
+                        } else {
+                            img.animate({ width: imgBaseWidth * zoom }, 'fast', function() {
                                 next();
-                            } else {
-                                img.animate({ width: imgBaseWidth * zoom }, 'fast', function() {
-                                    next();
-                                });
-                            }
-                        });
-                    }
+                            });
+                        }
+                    });
                     if(hidden) {
                         hidden = true;
                         image.hide().css({ position: '', left: ''});
@@ -722,6 +723,17 @@ function main() {
                 return that.getToolbar().hasClass('active');
             }
 
+            this.getScrollPosition = function() {
+                var toolbar = that.getToolbar();
+                return toolbar.position().top - listingScrollPadding;
+            }
+
+            this.isInPosition = function() {
+                var body = $('body')
+                    ;
+                return (body.scrollTop() == that.getScrollPosition());
+            }
+
             this.activate = function (autoScroll) {
                 var body = $('body'),
                     toolbar = that.getToolbar();
@@ -737,7 +749,7 @@ function main() {
                 if(autoScroll) {
                     fx.queue(function (next) {
                         body.data('activating', true)
-                            .animate({ scrollTop: toolbar.position().top - 10, easing: 'linear'}, 'fast', function() {
+                            .animate({ scrollTop: that.getScrollPosition(), easing: 'linear'}, 'fast', function() {
                                 body.data('activating', false);
                                 next();
                             });
@@ -789,7 +801,6 @@ function main() {
 
         this.bindHotkeys = function() {
             $(document).on('keyup', function(e) {
-
                 if(!e.shiftKey && !e.ctrlKey && !e.metaKey) {
                     switch(e.which) {
                         case 'J'.charCodeAt(0):
@@ -818,6 +829,7 @@ function main() {
                         case 'I'.charCodeAt(0):
                             that.toggleWindow('image');
                             break;
+                        case 189:
                         case '-'.charCodeAt(0):
                             that.changeZoom('-');
                             break;
@@ -931,15 +943,17 @@ function main() {
         this.changeListing = function(direction) {
             var body = $('body'),
                 current = body.data('current'),
-                next = current,
+                next = current || 0,
+                currentListing = that.getCurrentListing(),
                 listing
                 ;
-            console.log('Changing listing. Current: ' + current);
+            console.log('Changing listing', {current: current, direction: direction});
             if (direction == '+') {
-                if(!next && next !== 0) {
-                    next = 0;
-                } else {
-                    next++;
+                // Move to next listing if current one is in place
+                // otherwise we'll just properly position the current
+                // listing
+                if(currentListing.isInPosition()) {
+                   next++;
                 }
             } else if(direction == '-') {
                 if(!next && next !== 0) {
@@ -961,9 +975,11 @@ function main() {
                 return;
             }
 
-            // Before we activate the next listing, close any current windows
-            this.hideWindow('image');
-            this.hideWindow('map');
+            if(next !== current) {
+                // Before we activate the next listing, close any current windows
+                this.hideWindow('image');
+                this.hideWindow('map');
+            }
 
             listings[next].activate();
             body.data('current', next);
