@@ -1,6 +1,6 @@
 {
     "name":"TO MLS Improvements",
-    "version":"1.0",
+    "version":"1.1",
     "manifest_version": 2,
     "description":"Improvements the TO MLS Stratus Report Pages",
     "content_scripts":[

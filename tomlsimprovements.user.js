@@ -36,11 +36,12 @@ function addJQuery(callback) {
 }
 
 function main() {
-    toMlsImprovements = new function(jQuery) {
+    var toMlsImprovements = new function(jQuery) {
         var that = this,
             $ = jQuery,
             listings = [],
             fx = $({}),
+            gq = $({}),
             google,
             geocoder,
             listingScrollPadding = 20,
@@ -49,21 +50,24 @@ function main() {
                     return '' +
                         '<link rel="stylesheet" href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.0.4/css/bootstrap-combined.min.css" /> ' +
                         '<style>' +
-                        '   .toolbar {' +
+                        '   .tools {' +
                         '       display: block;' +
-                        '       background-color: #e7f3ff;' +
-                        '       border: 1px solid #909090;' +
-                        '       border-bottom: none;' +
-                        '       border-radius: 3px 3px 0 0;' +
                         '       position: relative;' +
                         '   }' +
-                        '   .toolbar.active {' +
+                        '   .tools .tool-area {' +
+                        '       background-color: #e7f3ff;' +
+                        '       border: 1px solid #909090;' +
+                        '   }' +
+                        '   .tools.active .tool-area {' +
                         '       background-color: #f3ffe7;' +
                         '   }' +
-                        '   .toolbar .contents {' +
+                        '   .tools .contents {' +
                         '       padding: 6px 5px;' +
                         '       text-align: center;' +
                         '       margin: 0;' +
+                        '   }' +
+                        '   .tools .toolbar {' +
+                        '       border-bottom: none;' +
                         '   }' +
                         '   .toolbar .right {' +
                         '       position: absolute;' +
@@ -84,25 +88,41 @@ function main() {
                         '   .toolbar .image-position {' +
                         '       display: none;' +
                         '   }' +
-                        '   .window {' +
+                        '   .sidebar {' +
+                        '       position: absolute;' +
+                        '       width: 400px;' +
+                        '   }' +
+                        '   .sidebar.left {' +
+                        '       left: -400px;' +
+                        '   }' +
+                        '   .sidebar.right {' +
+                        '       right: -400px;' +
+                        '   }' +
+                        '   .frame {' +
                         '       position: absolute;' +
                         '       left: 0; right: 0;' +
                         '       margin-top: 1px;' +
                         '       z-index: 1000;' +
                         '       overflow: hidden;' +
                         '   }' +
-                        '   .image-window .images {' +
+                        '   .image-frame .images {' +
                         '       overflow: hidden;' +
                         '   }' +
-                        '   .image-window .image img {' +
+                        '   .image-frame .image img {' +
                         '       height: auto;' +
                         '   }' +
-                        '   .map-window .map {' +
+                        '   .map-frame .map {' +
                         '       width: 80%;' +
                         '       height: 600px;' +
                         '   }' +
-                        '   .map-window .map img {' +
+                        '   .map-frame .map img {' +
                         '       max-width: none;' +
+                        '   }' +
+                        '   .matte { ' +
+                        '       position: absolute; top: 0; left: 0; right: 0; bottom: 0;' +
+                        '       position: fixed;' +
+                        '       background-color: white;' +
+                        '       opacity: 0.5;' +
                         '   }' +
                         '   .shadow {' +
                         '       -webkit-box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.25);' +
@@ -116,13 +136,17 @@ function main() {
                         '   .cf:after { clear: both; }' +
                         '</style>';
                 },
+                'tools': function(vars) {
+                    return '' +
+                        '<div class="tools" style="width: '+ vars.width +';"></div>'
+                },
                 'toolbar': function(vars) {
                     return '' +
-                        '<div class="toolbar" style="width: '+ vars.width +';">' +
+                        '<div class="toolbar tool-area">' +
                         '   <div class="contents cf btn-toolbar">' +
                         '       <div class="pull-right right">' +
                         '           <div class="btn-group image-toggle">' +
-                        '               <span class="btn btn-mini show-window" data-window="image"><i class="icon-picture"></i></span>' +
+                        '               <span class="btn btn-mini show-frame" data-frame="image"><i class="icon-picture"></i></span>' +
                         '           </div>' +
                         '           <div class="btn-group image-switcher">' +
                         '               <span class="btn btn-mini previous"><i class="icon-arrow-left"></i></span>' +
@@ -137,7 +161,7 @@ function main() {
                         '       <div class="pull-left left">' +
                         '           <h5>MLS: ' + vars.mls + ' <small><br />' + vars.price + '</small></h5>' +
                         '           <div class="btn-group">' +
-                        '               <a class="btn btn-mini show-window map" data-window="map" target="_blank" href="https://maps.google.com/?q=' + encodeURI(vars.address) + '"><i class="icon-map-marker"></i></a>' +
+                        '               <a class="btn btn-mini show-frame map" data-frame="map" target="_blank" href="https://maps.google.com/?q=' + encodeURI(vars.address) + '"><i class="icon-map-marker"></i></a>' +
                         '           </div>' +
                         '           <div class="btn-group">' +
                         '               <a class="btn btn-mini search-guava" target="_blank" href="https://google.com/search?q=site:guava.ca+' + encodeURI('"' + vars.address.replace(/, Toronto, ON$/, '') + '"') + '"><i class="icon-search"></i> Guava</a>' +
@@ -148,12 +172,24 @@ function main() {
                         '           <span class="image-position label label-info">Image <span class="current">0</span> of ' + vars.imageCount + '</span>' +
                         '       </p>' +
                         '   </div>' +
-                        '</div>'
+                        '</div>';
                 },
-                'imageWindow': function(vars) {
+                'leftSidebar': function(vars) {
+                    return '' +
+                        '<div class="sidebar left">' +
+                        '       <div class="street-view shadow"><img src="'+ vars.streetViewSrc +'"></div>' +
+                        '</div>';
+                },
+                'rightSidebar': function(vars) {
+                    return '' +
+                        '<div class="sidebar right">' +
+                        '       <div class="map shadow"><img src="'+ vars.mapSrc +'"></div>' +
+                        '</div>';
+                },
+                'imageFrame': function(vars) {
                     var tpl = '';
                     tpl += '' +
-                        '<div class="image-window window">' +
+                        '<div class="image-frame frame">' +
                         '   <div class="images">';
 
                     if(vars.images) $.each(vars.images, function(i, el) {
@@ -168,9 +204,9 @@ function main() {
                         '</div>';
                     return tpl;
                 },
-                'mapWindow': function(vars) {
+                'mapFrame': function(vars) {
                     return '' +
-                        '<div class="map-window window">' +
+                        '<div class="map-frame frame">' +
                         '   <div class="map shadow">' +
                         '       <!--<iframe width="425" height="350" frameborder="0" scrolling="no" ' +
                         '           marginheight="0" marginwidth="0" src="https://maps.google.com/?' +
@@ -198,7 +234,10 @@ function main() {
                 ;
 
             function init() {
-                that.injectToolbar()
+                that.injectTools();
+                that.injectLeftSidebar();
+                that.injectRightSidebar();
+                that.injectToolbar();
             }
 
             this.getElement = function() {
@@ -254,13 +293,28 @@ function main() {
                     }
                 }
 
-                if(this.getAddress()) {
-                    images.push('http://maps.googleapis.com/maps/api/staticmap?zoom=13&size=400x300&sensor=false&markers=' + encodeURI(this.getAddress()));
-                    images.push('http://maps.googleapis.com/maps/api/streetview?size=400x300&sensor=false&fov=120&location=' + encodeURI(this.getAddress()));
-                }
+//                if(this.getAddress()) {
+//                    images.push(that.getMapImageSrc());
+//                    images.push(that.getStreetViewImageSrc());
+//                }
 
                 return images;
             }
+
+            this.getMapImageSrc = function() {
+                if(this.getAddress()) {
+                    return 'http://maps.googleapis.com/maps/api/staticmap?zoom=15&size=400x300&sensor=false&markers=' + encodeURI(this.getAddress());
+                }
+                return false;
+            }
+
+            this.getStreetViewImageSrc = function() {
+                if(this.getAddress()) {
+                    return 'http://maps.googleapis.com/maps/api/streetview?size=400x300&sensor=false&fov=120&location=' + encodeURI(this.getAddress());
+                }
+                return false;
+            }
+
 
             this.getAddress = function() {
                 var addressCell
@@ -305,7 +359,7 @@ function main() {
             }
 
 
-            this.getWindowVariables = function(name) {
+            this.getFrameVariables = function(name) {
                 switch(name) {
                     case 'image':
                         return { images: this.getImages() };
@@ -314,73 +368,139 @@ function main() {
                 }
             }
 
-            this.bindWindowEvents = function(windowElement) {
-                windowElement.bind('show', that.onShowWindow)
-                             .bind('hide', that.onHideWindow)
+            this.bindFrameEvents = function(frameElement) {
+                frameElement.bind('show', that.onShowFrame)
+                             .bind('hide', that.onHideFrame)
                       ;
-                switch(windowElement.data('name')) {
+                switch(frameElement.data('name')) {
                     case 'image':
-                        windowElement.bind('opened', that.onImageWindowOpened)
-                        windowElement.bind('closed', that.onImageWindowClosed)
+                        frameElement.bind('opened', that.onImageFrameOpened)
+                        frameElement.bind('closed', that.onImageFrameClosed)
                         break;
                     case 'map':
-                        console.log('Binding map-window element', windowElement);
-                        windowElement.bind('opened', that.onMapWindowOpened);
+                        console.log('Binding map-frame element', frameElement);
+                        frameElement.bind('opened', that.onMapFrameOpened);
                         break;
 
                 }
             }
 
-            this.hasWindow = function(name) {
-                return typeof this.getElement().data(name + 'Window') !== 'undefined';
+            this.hasFrame = function(name) {
+                return typeof this.getElement().data(name + 'Frame') !== 'undefined';
             }
 
-            this.getWindow = function(name) {
-                var windowElement,
+            this.getFrame = function(name) {
+                var frameElement,
                     domObject,
-                    windowName = name + 'Window';
+                    frameName = name + 'Frame';
 
-                if(!that.hasWindow(name)) {
-                    windowElement = $(templates[windowName]( this.getWindowVariables(name) ));
-                    windowElement.hide()
+                if(!that.hasFrame(name)) {
+                    frameElement = $(templates[frameName]( this.getFrameVariables(name) ));
+                    frameElement.hide()
                                  .data('name', name);
-                    that.bindWindowEvents(windowElement);
+                    that.bindFrameEvents(frameElement);
 
-                    console.log('Initializing new window...');
-                    that.initWindow(windowElement);
+                    console.log('Initializing new frame…');
+                    that.initFrame(frameElement);
                     console.log('Initialized.');
 
-                    domObject = windowElement.get(0);
+                    domObject = frameElement.get(0);
 
                     element.get(0).parentNode.insertBefore(domObject, element.get(0));
-                    element.data(windowName, $(domObject));
+                    element.data(frameName, $(domObject));
                 }
-                return element.data(windowName);
+                return element.data(frameName);
             }
 
             this.getToolbar = function() {
-                var toolbar;
-                if(!element.data('toolbar')) {
-                    toolbar = $(templates.toolbar({
-                        width: this.getElement().width() + 'px',
-                        mls: this.getMls(),
-                        address: this.getAddress(),
-                        price: this.getPrice(),
-                        imageCount: this.getImages().length
-                    }));
-                    element.data('toolbar', toolbar);
+                return this.getComponent('toolbar');
+            };
+
+            this.getTools = function() {
+                return this.getComponent('tools');
+            };
+
+            this.getLeftSidebar = function() {
+                return this.getComponent('leftSidebar');
+            };
+
+            this.getRightSidebar = function() {
+                return this.getComponent('rightSidebar');
+            };
+
+            this.getComponentVars = function(name) {
+                switch(name) {
+                    case 'tools':
+                        return {
+                            width: this.getElement().outerWidth() + 'px'
+                        };
+                    break;
+                    case 'toolbar':
+                        return {
+                            mls: this.getMls(),
+                            address: this.getAddress(),
+                            price: this.getPrice(),
+                            imageCount: this.getImages().length
+                        };
+                        break;
+                    case 'leftSidebar':
+                        return {
+                            streetViewSrc: that.getStreetViewImageSrc()
+                        };
+                        break;
+                    case 'rightSidebar':
+                        return {
+                            mapSrc: that.getMapImageSrc()
+                        }
+                        break;
                 }
-                return element.data('toolbar');
-            }
+            };
+
+            this.getComponent = function(name) {
+                var component,
+                    componentName = 'component-' + name;
+                if(!element.data(componentName)) {
+                    //console.log('Rendering ' + name + ' componet with vars', this.getComponentVars(name));
+                    component = $(templates[name](this.getComponentVars(name)));
+                    element.data(componentName, component);
+                }
+                return element.data(componentName);
+            };
 
             this.getImagesList = function() {
-                return this.getImageWindow().find('.images');
-            }
+                return this.getImageFrame().find('.images');
+            };
+
+            this.injectTools = function() {
+                this.getElement().before(that.getTools());
+            };
+
+            this.injectLeftSidebar = function() {
+                var sidebar = that.getLeftSidebar();
+                sidebar.hide();
+                this.getTools().prepend(sidebar);
+                sidebar.find('img').on('load', function() {
+                    sidebar.fadeIn();
+                });
+            };
+
+            this.injectRightSidebar = function() {
+                var sidebar = that.getRightSidebar();
+                sidebar.hide();
+                this.getTools().prepend(sidebar);
+                sidebar.find('img').on('load', function() {
+                    sidebar.fadeIn();
+                });
+            };
 
             this.injectToolbar = function() {
                 var toolbar = this.getToolbar();
 
-                this.getElement().before(toolbar);
+                toolbar.hide();
+
+                this.getTools().append(toolbar);
+
+                toolbar.fadeIn();
 
                 toolbar.find('.btn.next').bind('click', function(e) {
                     e.preventDefault();
@@ -407,13 +527,15 @@ function main() {
                     e.stopPropagation();
                     that.changeZoom(0);
                 });
-                toolbar.find('.btn.show-window').bind('click', function(e) {
+                toolbar.find('.btn.show-frame').bind('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    that.toggleWindow($(this).data('window'));
-                });
-            }
 
+                    var button = $(this);
+                    that.toggleFrame(button.data('frame'));
+                });
+
+            }
 
             this.updateImagePositionLabel = function() {
                 var list = this.getImagesList(),
@@ -428,85 +550,114 @@ function main() {
                 }
             }
 
-            this.toggleWindow = function(name) {
-                if(this.getWindow(name).is(':hidden')) {
-                    this.showWindow(name);
+            this.toggleFrame = function(name) {
+                if(this.getFrame(name).is(':hidden')) {
+                    this.showFrame(name);
                 } else {
-                    this.hideWindow(name);
+                    this.hideFrame(name);
                 }
             }
-            this.toggleImageWindow = function() {
-                that.toggleWindow('image');
+            this.toggleImageFrame = function() {
+                that.toggleFrame('image');
             }
 
-            this.toggleMapWindow = function(name) {
-                that.toggleWindow('map');
+            this.toggleMapFrame = function(name) {
+                that.toggleFrame('map');
             }
 
-            this.initWindow = function(windowElement) {
-                var method = windowElement.data('name') + 'WindowInit';
-                this[method](windowElement);
+            this.initFrame = function(frameElement) {
+                var method = frameElement.data('name') + 'FrameInit';
+                this[method](frameElement);
             }
 
-            this.imageWindowInit = function(windowElement) {
-                windowElement.find('.images .image').not(':first').hide();
+            this.imageFrameInit = function(frameElement) {
+                frameElement.find('.images .image').not(':first').hide();
             }
 
-            this.fixMapHeight = function(windowElement) {
+            this.fixMapHeight = function(frameElement) {
                 var body = $('body'),
                     windowHeight = body.data('windowHeight');
                 console.log('Fixing map height');
-                windowElement.css({height: (window.innerHeight - 70 - that.getToolbar().height()) + 'px' });
-                google.maps.event.trigger(windowElement.data('map'), "resize");
+                frameElement.css({height: (window.innerHeight - 70 - that.getToolbar().height()) + 'px' });
+                google.maps.event.trigger(frameElement.find('.map').data('map'), "resize");
 
             }
 
-            this.mapWindowInit = function (windowElement) {
-                console.log('Initializing Map Window');
+            this.geocodeLocation = function(callback) {
+                console.log('Geocoding address: ' + that.getAddress());
+                geocoder.geocode({ 'address': that.getAddress()}, function (results, status) {
+                    console.log('Geocode Returned', status);
+                    if (status == google.maps.GeocoderStatus.OK) {
+                        that.getElement().data('geocodedLocation', results[0].geometry.location).trigger('geocoded');
+                    } else if(status == "OVER_QUERY_LIMIT") {
+                        console.log('Over query limit. Requeuing with delay.');
+                        setTimeout(function() {
+                            that.geocodeLocation(callback);
+                        }, 2000);
+                        return;
+                    } else {
+                        that.getElement().data('geocodedLocation', -1);
+                    }
+                    callback();
+                });
+            };
+
+            this.initMap = function (container, callback) {
+                that.geocodeLocation(function() {
+                    var geoLocation = that.getElement().data('geocodedLocation')
+                    if (geoLocation == -1) {
+                        container.html("Geocode was not successful");
+                    } else {
+                        var mapOptions = {
+                                center: geoLocation,
+                                zoom: 15,
+                                mapTypeId: google.maps.MapTypeId.ROADMAP
+                            },
+                            map = new google.maps.Map(container.get(0), mapOptions),
+                            marker = new google.maps.Marker({
+                                map: map,
+                                position: geoLocation,
+                                title: that.getAddress()
+                            });
+
+                        container.data({ 'map': map, 'mapOptions': mapOptions });
+                        console.log('Map frame initialized');
+                    }
+                    callback();
+                })
+            };
+
+            this.mapFrameInit = function (frameElement) {
+                console.log('Initializing new map frame…');
+
+                var mapContainer = frameElement.find('.map');
 
                 $('body').on('window-resize', function() {
-                    that.fixMapHeight(windowElement);
+                    that.fixMapHeight(frameElement);
                 });
 
                 fx.queue(function(next) {
-                    geocoder.geocode( { 'address': that.getAddress()}, function(results, status) {
-                        console.log('Geocode Returned');
-                        if (status == google.maps.GeocoderStatus.OK) {
-                                var container = windowElement.find('.map'),
-                                mapOptions = {
-                                    center: results[0].geometry.location,
-                                    zoom:15,
-                                    mapTypeId:google.maps.MapTypeId.ROADMAP
-                                },
-                                map = new google.maps.Map(container.get(0),mapOptions);
-                                var marker = new google.maps.Marker({
-                                    map: map,
-                                    position: results[0].geometry.location,
-                                    title: that.getAddress()
-                                });
+                    that.initMap(mapContainer, next);
+                }).queue(function(next) {
+                    if(mapContainer.data('map')) {
+                        that.fixMapHeight(frameElement);
+                    }
+                    next();
+                });
 
-                                windowElement.data({ 'map': map, 'mapOptions': mapOptions });
-                                that.fixMapHeight(windowElement);
-
-                        } else {
-                            container.html("Geocode was not successful for the following reason: " + status);
-                        }
-                        console.log('Map window initialized');
-                        next();
-                    });
-                })
             }
 
             this.toggleStreetView = function() {
-                var windowElement = this.getWindow('map'),
-                    hidden = that.getMapWindow().is(':hidden')
+                var frameElement = this.getFrame('map'),
+                    hidden = that.getMapFrame().is(':hidden')
                     ;
 
-                that.showMapWindow();
+                that.showMapFrame();
 
                 fx.queue(function(next) {
-                    var map = windowElement.data('map'),
-                        mapOptions = windowElement.data('mapOptions')
+                    var mapContainer = frameElement.find('.map'),
+                        map = mapContainer.data('map'),
+                        mapOptions = mapContainer.data('mapOptions')
                         ;
                     console.log('Toggling Street View');
 
@@ -518,92 +669,105 @@ function main() {
                 });
             }
 
-            this.onMapWindowOpened = function (event) {
-                var windowElement = $(this),
-                    map = windowElement.data('map');
+            this.onMapFrameOpened = function (event) {
+                var frameElement = $(this),
+                    mapContainer = frameElement.find('.map'),
+                    map = mapContainer.data('map');
 
-                console.log('Map Window Opened');
-                google.maps.event.trigger(map, "resize");
-                map.setOptions(windowElement.data('mapOptions'));
+                console.log('Map Frame Opened');
+                if(mapContainer.data('map')) {
+                    google.maps.event.trigger(map, "resize");
+                    map.setOptions(mapContainer.data('mapOptions'));
+                }
+            };
 
-            }
-
-            this.onImageWindowOpened = function(event) {
+            this.onImageFrameOpened = function(event) {
                 that.getToolbar().find('.image-count').fadeOut(function() {
                     that.updateImagePositionLabel();
                     that.getToolbar().find('.image-position').fadeIn();
                 })
             }
 
-            this.onImageWindowClosed = function(event) {
+            this.onImageFrameClosed = function(event) {
                 that.getToolbar().find('.image-position').fadeOut(function() {
                     that.getToolbar().find('.image-count').fadeIn();
                 })
             }
 
-            this.onShowWindow = function(event) {
-                var windowElement = $(this);
-                if(windowElement.is(':visible')) return;
-                console.log('Showing ' + windowElement.data('name') + ' window');
+            this.onShowFrame = function(event) {
+                var frameElement = $(this);
+                if(frameElement.is(':visible')) return;
+
+                console.log('Showing ' + frameElement.data('name') + ' frame', frameElement);
                 fx.queue(function(next) {
-                    windowElement.slideDown('fast', function() {
-                        that.getToolbar().find('.btn.show-window[data-window=' + windowElement.data('name') + ']').addClass('active');
-                        windowElement.trigger('opened');
+                    //frameElement.data('matte', $('<div class="matte"></div>').css('display', 'none'));
+                    //$('body').append(frameElement.data('matte'));
+                    //frameElement.data('matte').fadeIn();
+
+                    frameElement.slideDown('fast', function() {
+                        that.getToolbar().find('.btn.show-frame[data-frame=' + frameElement.data('name') + ']').addClass('active');
+                        frameElement.trigger('opened');
                         next()
                     });
                 });
             }
 
-            this.onHideWindow = function(event) {
-                var window = $(this);
-                if(window.is(':hidden')) return;
+            this.onHideFrame = function(event) {
+                var frame = $(this);
+                if(frame.is(':hidden')) return;
                 fx.queue(function(next) {
-                    window.slideUp('fast', function() {
-                        that.getToolbar().find('.btn.show-window[data-window=' + window.data('name') + ']').removeClass('active');
-                        window.trigger('closed');
+                    //var matte = frame.data('matte');
+
+                    //matte.fadeOut(function() {
+                    //    matte.remove();
+                    //});
+
+                    frame.slideUp('fast', function() {
+                        that.getToolbar().find('.btn.show-frame[data-frame=' + frame.data('name') + ']').removeClass('active');
+                        frame.trigger('closed');
                         next();
                     });
                 });
             }
 
-            this.showWindow  = function(name) {
-                var windowElement = this.getWindow(name);
+            this.showFrame  = function(name) {
+                var frameElement = this.getFrame(name);
 
-                // Close any other windows
-                $('.window').not(windowElement).trigger('hide');
+                // Close any other frames
+                $('.frame').not(frameElement).trigger('hide');
                 if(!that.isActivated()) {
                     that.activate();
                 }
-                windowElement.trigger('show');
+                frameElement.trigger('show');
 
             }
 
-            this.hideWindow = function(name) {
-                this.getWindow(name).trigger('hide');
+            this.hideFrame = function(name) {
+                this.getFrame(name).trigger('hide');
             }
 
-            this.getImageWindow = function() {
-                return that.getWindow('image');
+            this.getImageFrame = function() {
+                return that.getFrame('image');
             }
 
-            this.getMapWindow = function() {
-                return that.getWindow('map');
+            this.getMapFrame = function() {
+                return that.getFrame('map');
             }
 
-            this.showImageWindow = function() {
-                return that.showWindow('image');
+            this.showImageFrame = function() {
+                return that.showFrame('image');
             }
 
-            this.showMapWindow = function() {
-                return that.showWindow('map');
+            this.showMapFrame = function() {
+                return that.showFrame('map');
             }
 
-            this.hideImageWindow = function() {
-                return that.showWindow('image');
+            this.hideImageFrame = function() {
+                return that.showFrame('image');
             }
 
-            this.hideMapWindow = function() {
-                return that.showWindow('map');
+            this.hideMapFrame = function() {
+                return that.showFrame('map');
             }
 
             this.changeZoom = function(direction) {
@@ -611,10 +775,10 @@ function main() {
                     images = list.find('.image'),
                     current, zoom;
 
-                if(that.getImageWindow().is(':hidden')) {
-                    // First time the window's been opened, so we
+                if(that.getImageFrame().is(':hidden')) {
+                    // First time the frame's been opened, so we
                     // ignore the change directive
-                    this.showImageWindow();
+                    this.showImageFrame();
                     return;
                 }
                 current = list.data('zoom') || 0;
@@ -669,15 +833,16 @@ function main() {
 
             this.changeImage = function(direction) {
                 var list = this.getImagesList(),
-                    images = list.find('.image');
+                    images = list.find('.image'),
+                    current, next, looping = false;
 
-                // if no windows are open...
-                if(this.getImageWindow().is(':hidden') && this.getMapWindow().is(':hidden')) {
-                    // First time the window's been opened, so we
+                // if no frames are open...
+                if(this.getImageFrame().is(':hidden') && this.getMapFrame().is(':hidden')) {
+                    // First time the frame's been opened, so we
                     // ignore the change directive
-                    this.showImageWindow();
+                    this.showImageFrame();
                     return;
-                } else if (this.getMapWindow().is(':visible')) {
+                } else if (this.getMapFrame().is(':visible')) {
                     // Do nothing when maps are open
                     return;
                 }
@@ -690,13 +855,22 @@ function main() {
                 }
 
                 next = current + (direction == '-' ? -1 : 1);
+
                 if(next < 0) {
                     next = images.length - 1;
+                    looping = true;
                 }
                 if(next > images.length - 1) {
                     next = 0;
+                    looping = true;
                 }
+
                 console.log('Next: ' + next);
+
+                if(looping) {
+                    list.find('.image:visible').effect('shake', { direction: direction == '+' ? 'left' : 'right', times: 1, distance: 3 }, 100);
+                }
+
                 fx.queue(function(nextFn) {
                     list.find('.image:visible').hide(
                         'drop',
@@ -720,12 +894,12 @@ function main() {
             }
 
             this.isActivated = function() {
-                return that.getToolbar().hasClass('active');
+                return that.getTools().hasClass('active');
             }
 
             this.getScrollPosition = function() {
-                var toolbar = that.getToolbar();
-                return toolbar.position().top - listingScrollPadding;
+                var tools = that.getTools();
+                return tools.position().top - listingScrollPadding;
             }
 
             this.isInPosition = function() {
@@ -736,13 +910,13 @@ function main() {
 
             this.activate = function (autoScroll) {
                 var body = $('body'),
-                    toolbar = that.getToolbar();
+                    tools = that.getTools();
 
                 autoScroll = typeof autoScroll !== 'undefined' ? autoScroll : true;
 
                 if(!that.isActivated()) {
-                    $('.toolbar').removeClass('active');
-                    toolbar.addClass('active');
+                    tools.removeClass('active');
+                    tools.addClass('active');
                 }
 
                 body.data('current', $(listings).index(that));
@@ -763,17 +937,36 @@ function main() {
         }
 
         this.main = function() {
-            that.injectStyles();
-            $('body > table table[width="650"][border="1"]').each(that.improveListing);
-            that.bindHotkeys();
-            that.bindScroll();
             $('body').data('toMlsImprovements', that);
-        }
+            that.injectStyles();
+            $(function() {
+                $('body > table table[width="650"][border="1"]').each(that.improveListing);
+                that.bindHotkeys();
+                that.bindScroll();
+                that.initSidebarSizing();
+            });
+        };
+
+        this.initSidebarSizing = function () {
+            $(window).on('resize', function () {
+                var body = $('body');
+                if (body.data('sidebarResizeTimeout')) {
+                    clearTimeout(body.data('sidebarResizeTimeout'));
+                }
+                body.data('sidebarResizeTimeout', setTimeout(function () {
+                    that.resizeSidebars();
+                    body.removeData('sidebarResizeTimeout');
+                }, 1000));
+            });
+
+            that.resizeSidebars();
+        };
 
         this.setGoogle = function(googleInstance) {
+            console.log('Setting google instances');
             google = googleInstance;
             geocoder = new google.maps.Geocoder();
-        }
+        };
 
         this.bindScroll = function() {
             $(document).scroll(function() {
@@ -785,8 +978,8 @@ function main() {
 
                 $.each(listings, function() {
                     var listing = this,
-                        toolbar = listing.getToolbar(),
-                        top = toolbar.position().top
+                        tools = listing.getTools(),
+                        top = tools.position().top
                         ;
                     if(top > body.scrollTop()
                         && top < body.scrollTop() + (window.innerHeight / 4)) {
@@ -809,11 +1002,11 @@ function main() {
                         case 'K'.charCodeAt(0):
                             that.changeListing('-');
                             break;
-                        case 39: // → Key
+                        case 39: // ? Key
                         case 'N'.charCodeAt(0):
                             that.changeImage('+');
                             break;
-                        case 37: // ← Key
+                        case 37: // ? Key
                         case 'P'.charCodeAt(0):
                             that.changeImage('-');
                             break;
@@ -821,13 +1014,13 @@ function main() {
                             that.openGuava();
                             break;
                         case 'M'.charCodeAt(0):
-                            that.toggleWindow('map');
+                            that.toggleFrame('map');
                             break;
                         case 'S'.charCodeAt(0):
                             that.toggleStreetView();
                             break;
                         case 'I'.charCodeAt(0):
-                            that.toggleWindow('image');
+                            that.toggleFrame('image');
                             break;
                         case 189:
                         case '-'.charCodeAt(0):
@@ -837,8 +1030,8 @@ function main() {
                             that.changeZoom(0);
                             break;
                         case 27: // Esc
-                            that.hideWindow('image');
-                            that.hideWindow('map');
+                            that.hideFrame('image');
+                            that.hideFrame('map');
                             break;
                     }
                 } else if (e.shiftKey && !e.ctrlKey && !e.metaKey) {
@@ -857,6 +1050,8 @@ function main() {
                 }
             });
         }
+
+
 
         this.getCurrentListing = function() {
             var body = $('body'),
@@ -890,11 +1085,11 @@ function main() {
             that.openLink(listing.getToolbar().find('a.btn.search-guava'));
         }
 
-        this.toggleWindow = function(name) {
+        this.toggleFrame = function(name) {
             var listing = this.getCurrentListing();
             if(!listing) return;
 
-            listing.toggleWindow(name);
+            listing.toggleFrame(name);
         }
 
         this.toggleStreetView = function() {
@@ -904,7 +1099,7 @@ function main() {
             listing.toggleStreetView();
         }
 
-        this.hideWindow = function(name) {
+        this.hideFrame = function(name) {
             var body = $('body'),
                 current = body.data('current'),
                 listing;
@@ -917,13 +1112,13 @@ function main() {
             listing = this.getCurrentListing();
             if(!listing) return;
 
-            if(!listing.hasWindow(name)) {
+            if(!listing.hasFrame(name)) {
                 // Nothing to do here
                 return;
             }
-            console.log('Hiding window ' + name, current);
+            console.log('Hiding frame ' + name, current);
 
-            listing.hideWindow(name);
+            listing.hideFrame(name);
         }
 
         this.changeImage = function(direction) {
@@ -976,9 +1171,9 @@ function main() {
             }
 
             if(next !== current) {
-                // Before we activate the next listing, close any current windows
-                this.hideWindow('image');
-                this.hideWindow('map');
+                // Before we activate the next listing, close any current frames
+                this.hideFrame('image');
+                this.hideFrame('map');
             }
 
             listings[next].activate();
@@ -986,15 +1181,27 @@ function main() {
         }
 
         this.injectStyles = function() {
-            $('head').append($('<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/smoothness/jquery-ui.css />'));
             $('head').append($(templates.style()));
-        }
+            $('head').append($('<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/smoothness/jquery-ui.css />'));
+        };
 
         this.improveListing = function() {
             var listing = new Listing($(this));
 
             listings.push(listing);
+        };
 
+        this.resizeSidebars = function() {
+            console.log('Resizing sidebars…')
+            var lefts = $('.tools .sidebar.left'),
+                rights = $('.tools .sidebar.right'),
+                space = ( $(window).width() - $('.tools').first().width() ) / 2,
+                width = space >= 420 ? 400 : space - 20,
+                offset = (-1 * width) - ((space - width) / 2);
+
+            console.log('Sidebar space: ' + space);
+            lefts.css({ width: width, left: offset });
+            rights.css({ width: width, right: offset });
         }
 
     }(jQuery);
